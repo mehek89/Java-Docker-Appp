@@ -8,8 +8,9 @@ pipeline {
         DOCKER_IMAGE_NAME = 'mehek08/java-docker-app'
         DOCKER_IMAGE_TAG = 'latest'
         // Maven and Java paths
-        MAVEN_HOME = 'C:\\Program Files\\Apache\\maven-3.9.9'
+        MAVEN_HOME = 'C:\\Users\\Mahak Modi\\Downloads\\apache-maven-3.9.11-bin\\apache-maven-3.9.11'
         JAVA_HOME = 'C:\\Program Files\\Java\\jdk-21'
+        PATH = "${env.MAVEN_HOME}\\bin;${env.JAVA_HOME}\\bin;${env.PATH}"
     }
 
     stages {
@@ -23,7 +24,7 @@ pipeline {
         stage('Build Java App') {
             steps {
                 echo 'Building Java application using Maven...'
-                bat "\"%MAVEN_HOME%\\bin\\mvn\" clean package -DskipTests"
+                bat "\"${MAVEN_HOME}\\bin\\mvn.cmd\" clean package -DskipTests"
             }
         }
 
