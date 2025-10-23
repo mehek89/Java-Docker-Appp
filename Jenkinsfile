@@ -3,7 +3,9 @@ pipeline {
 
     environment {
         DOCKER_USER = 'mehek08'
-        DOCKER_PASS = credentials('docker-hub-credentialss') // Your Docker Hub credentials ID
+        DOCKER_PASS = credentials('docker-hub-credentialss') // Docker Hub credentials ID
+        IMAGE_NAME = "mehek08/java-docker-app"
+        IMAGE_TAG = "latest"
     }
 
     stages {
@@ -26,17 +28,30 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 echo 'Building Docker image...'
-                bat '"C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe" build -t mehek08/java-docker-app:latest .'
+                script {
+                    def status = bat(script: "\"C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe\" build -t ${IMAGE_NAME}:${IMAGE_TAG} .", returnStatus: true)
+                    if (status != 0) {
+                        error "Docker build failed!"
+                    }
+                }
             }
         }
 
-        stage('Login to Docker Hub & Push Image') {
+        stage('Push Docker Image if New') {
             steps {
-                echo 'Logging into Docker Hub and pushing Docker image...'
-                // Docker login
-                bat(script: "echo %DOCKER_PASS% | \"C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe\" login --username %DOCKER_USER% --password-stdin", returnStatus: true)
-                // Docker push
-                bat(script: '"C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe" push mehek08/java-docker-app:latest', returnStatus: true)
+                echo 'Checking if Docker image already exists on Docker Hub...'
+                script {
+                    def remoteDigest = bat(script: "\"C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe\" manifest inspect ${IMAGE_NAME}:${IMAGE_TAG}", returnStatus: true)
+                    if (remoteDigest != 0) {
+                        echo 'Docker image does not exist remotely. Logging in and pushing...'
+                        // Login
+                        bat(script: "echo %DOCKER_PASS% | \"C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe\" login --username %DOCKER_USER% --password-stdin")
+                        // Push
+                        bat("\"C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe\" push ${IMAGE_NAME}:${IMAGE_TAG}")
+                    } else {
+                        echo 'Docker image already exists. Skipping push.'
+                    }
+                }
             }
         }
     }
