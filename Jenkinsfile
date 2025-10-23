@@ -2,19 +2,15 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_USER = 'mehek08'
-        DOCKER_PASS = credentials('docker-hub-credentialss') // Docker Hub credentials ID
-        IMAGE_NAME = "mehek08/java-docker-app"
-        IMAGE_TAG = "latest"
+        DOCKER_HUB_CREDENTIALS = 'docker-hub-credentialss' // your Jenkins Docker Hub credentials ID
+        DOCKER_IMAGE_NAME = 'mehek08/java-docker-app'
     }
 
     stages {
-        stage('Checkout SCM') {
+        stage('Checkout Code') {
             steps {
                 echo 'Checking out code from GitHub...'
-                git branch: 'main',
-                    url: 'https://github.com/mehek89/Java-Docker-Appp.git',
-                    credentialsId: '' // Add Git credentials if repo is private
+                git branch: 'main', url: 'https://github.com/mehek89/Java-Docker-Appp.git'
             }
         }
 
@@ -27,30 +23,27 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                echo 'Building Docker image...'
                 script {
-                    def status = bat(script: "\"C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe\" build -t ${IMAGE_NAME}:${IMAGE_TAG} .", returnStatus: true)
-                    if (status != 0) {
-                        error "Docker build failed!"
-                    }
+                    // Get short Git commit ID for tagging
+                    def commitId = bat(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    env.IMAGE_TAG = commitId
+                    echo "Building Docker image with tag: ${env.IMAGE_TAG}"
+                    
+                    // Build Docker image
+                    bat "\"C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe\" build -t ${DOCKER_IMAGE_NAME}:${env.IMAGE_TAG} ."
                 }
             }
         }
 
-        stage('Push Docker Image if New') {
+        stage('Push Docker Image') {
             steps {
-                echo 'Checking if Docker image already exists on Docker Hub...'
-                script {
-                    def remoteDigest = bat(script: "\"C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe\" manifest inspect ${IMAGE_NAME}:${IMAGE_TAG}", returnStatus: true)
-                    if (remoteDigest != 0) {
-                        echo 'Docker image does not exist remotely. Logging in and pushing...'
-                        // Login
-                        bat(script: "echo %DOCKER_PASS% | \"C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe\" login --username %DOCKER_USER% --password-stdin")
-                        // Push
-                        bat("\"C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe\" push ${IMAGE_NAME}:${IMAGE_TAG}")
-                    } else {
-                        echo 'Docker image already exists. Skipping push.'
-                    }
+                echo 'Logging into Docker Hub and pushing Docker image...'
+                withCredentials([usernamePassword(credentialsId: "${DOCKER_HUB_CREDENTIALS}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    // Docker login
+                    bat "echo %DOCKER_PASS% | \"C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe\" login --username %DOCKER_USER% --password-stdin"
+                    
+                    // Push image quietly
+                    bat "\"C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe\" push --quiet ${DOCKER_IMAGE_NAME}:${env.IMAGE_TAG}"
                 }
             }
         }
@@ -58,10 +51,10 @@ pipeline {
 
     post {
         success {
-            echo 'Pipeline completed successfully!'
+            echo "Pipeline completed successfully. Docker image ${DOCKER_IMAGE_NAME}:${env.IMAGE_TAG} pushed!"
         }
         failure {
-            echo 'Pipeline failed! Check console output for errors.'
+            echo "Pipeline failed! Check console output for errors."
         }
     }
 }
