@@ -3,15 +3,16 @@ pipeline {
 
     environment {
         DOCKER_USER = 'mehek08'
-        DOCKER_PASS = credentials('docker-hub-credentialss') // your Jenkins Docker credential ID
+        DOCKER_PASS = credentials('docker-hub-credentialss') // Your Docker Hub credentials ID
     }
 
     stages {
-
         stage('Checkout SCM') {
             steps {
                 echo 'Checking out code from GitHub...'
-                git branch: 'main', url: 'https://github.com/mehek89/Java-Docker-Appp.git'
+                git branch: 'main',
+                    url: 'https://github.com/mehek89/Java-Docker-Appp.git',
+                    credentialsId: '' // Add Git credentials if repo is private
             }
         }
 
@@ -32,23 +33,20 @@ pipeline {
         stage('Login to Docker Hub & Push Image') {
             steps {
                 echo 'Logging into Docker Hub and pushing Docker image...'
-                withCredentials([string(credentialsId: 'docker-hub-credentialss', variable: 'DOCKER_PASS')]) {
-                    bat "echo %DOCKER_PASS% | \"C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe\" login --username %DOCKER_USER% --password-stdin"
-                    bat '"C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe" push mehek08/java-docker-app:latest'
-                }
+                // Docker login
+                bat(script: "echo %DOCKER_PASS% | \"C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe\" login --username %DOCKER_USER% --password-stdin", returnStatus: true)
+                // Docker push
+                bat(script: '"C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe" push mehek08/java-docker-app:latest', returnStatus: true)
             }
         }
     }
 
     post {
-        always {
-            echo 'Pipeline finished!'
-        }
         success {
             echo 'Pipeline completed successfully!'
         }
         failure {
-            echo 'Pipeline failed! Check logs, but Docker push may have succeeded.'
+            echo 'Pipeline failed! Check console output for errors.'
         }
     }
 }
