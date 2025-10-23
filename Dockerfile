@@ -1,14 +1,11 @@
-# Use OpenJDK 21
+# Use OpenJDK as base image
 FROM openjdk:21-jdk
 
-# Set working directory inside container
+# Set working directory
 WORKDIR /app
 
-# Copy Maven project
-COPY . /app
-
-# Build the project
-RUN ./mvnw clean package -DskipTests || mvn clean package -DskipTests
+# Copy the built jar from Jenkins workspace
+COPY target/java-docker-app-1.0-SNAPSHOT.jar app.jar
 
 # Run the application
-CMD ["java", "-cp", "target/java-docker-app-1.0-SNAPSHOT.jar", "com.example.App"]
+ENTRYPOINT ["java", "-jar", "app.jar"]
