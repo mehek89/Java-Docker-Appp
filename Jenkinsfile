@@ -7,10 +7,10 @@ pipeline {
         DOCKER_IMAGE_TAG = 'latest'
 
         // Path to Docker executable on Windows
-        DOCKER_PATH = '"C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe"'
+        DOCKER_PATH = 'C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe'
 
         // Path to Maven on Windows
-        MAVEN_HOME = '"C:\\Users\\Mahak Modi\\Downloads\\apache-maven-3.9.11-bin\\apache-maven-3.9.11"'
+        MAVEN_HOME = 'C:\\Users\\Mahak Modi\\Downloads\\apache-maven-3.9.11-bin\\apache-maven-3.9.11'
     }
 
     stages {
@@ -25,23 +25,23 @@ pipeline {
         stage('Build Java App') {
             steps {
                 echo 'Building Java application using Maven...'
-                bat "${MAVEN_HOME}\\bin\\mvn.cmd clean package -DskipTests"
+                // Use double quotes for bat command with variables
+                bat "\"${MAVEN_HOME}\\bin\\mvn.cmd\" clean package -DskipTests"
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 echo 'Building Docker image...'
-                bat "${DOCKER_PATH} build -t %DOCKER_IMAGE_NAME%:%DOCKER_IMAGE_TAG% ."
+                bat "\"${DOCKER_PATH}\" build -t ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} ."
             }
         }
 
         stage('Login to Docker Hub') {
             steps {
                 echo 'Logging into Docker Hub...'
-                // You can store credentials in Jenkins and use withCredentials
                 withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    bat "${DOCKER_PATH} login -u %DOCKER_USER% -p %DOCKER_PASS%"
+                    bat "\"${DOCKER_PATH}\" login -u %DOCKER_USER% -p %DOCKER_PASS%"
                 }
             }
         }
@@ -49,7 +49,7 @@ pipeline {
         stage('Push Docker Image') {
             steps {
                 echo 'Pushing Docker image to Docker Hub...'
-                bat "${DOCKER_PATH} push %DOCKER_IMAGE_NAME%:%DOCKER_IMAGE_TAG%"
+                bat "\"${DOCKER_PATH}\" push ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
             }
         }
     }
